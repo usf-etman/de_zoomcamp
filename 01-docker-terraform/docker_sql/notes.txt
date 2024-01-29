@@ -1,0 +1,74 @@
+docker run hello-world ---> test docker installation
+docker run -it --entrypoint=bash python:3.9 ---> Change entrypoint for image (ex: here we start with bash instead of python)
+
+Dockerfile:
+-----------
+FROM ---> Load base image on top of which you will build your docker image
+RUN ---> Run any cmd commands on container
+WORKDIR ---> Set working directory in container for any subsequent ADD, COPY, ENTRYPOINT, CMD or RUN instructions
+COPY ---> Copies files from your host machine to the container
+ENTRYPOINT ---> Define the executable which the container runs when we do docker run command, ex: ["bash"], ["python", "script.py"]
+
+docker build -t taxi_ingest:v001 .
+
+Docker Run With Options for postgres:
+-------------------------------------
+docker run -it \
+  -e POSTGRES_USER="root" \
+  -e POSTGRES_PASSWORD="root" \
+  -e POSTGRES_DB="ny_taxi" \
+  -v G:/Courses/DATA/ZoomCamp/01-docker-terraform/docker_sql/ny_taxi_postgres_data:/var/lib/postgresql/data \
+  -p 5555:5432 \
+  postgres:13
+(-e: export, -v: volume, -p: port)
+
+pgcli:
+------
+pgcli -h localhost -p 5555 -u root -d ny_taxi
+
+pgAdmin:
+--------
+docker run -it \
+  -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+  -e PGADMIN_DEFAULT_PASSWORD="root" \
+  -p 8080:80 \
+  dpage/pgadmin4
+  
+Find running services on specific port on windows:
+--------------------------------------------------
+Get-NetTCPConnection -LocalPort 8888 | Select-Object -ExpandProperty OwningProcess;
+
+To have 2 docker containers in the same network:
+------------------------------------------------
+docker network create pg-network
+
+docker run -it \
+  -e POSTGRES_USER="root" \
+  -e POSTGRES_PASSWORD="root" \
+  -e POSTGRES_DB="ny_taxi" \
+  -v G:/Courses/DATA/ZoomCamp/01-docker-terraform/docker_sql/ny_taxi_postgres_data:/var/lib/postgresql/data \
+  -p 5555:5432 \
+  --network=pg-network \
+  --name pg-database \
+  postgres:13
+  
+docker run -it \
+  -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+  -e PGADMIN_DEFAULT_PASSWORD="root" \
+  -p 8002:80 \
+  --network=pg-network \
+  --name pgadmin \
+  dpage/pgadmin4
+  
+Run a containerized pipeline:
+-----------------------------
+docker run -it \
+	--network=pg-network \
+	taxi_ingest:v001 \
+		--user=root \
+		--password=root \
+		--host=pg-database \
+		--port=5432 \
+		--db=ny_taxi \
+		--table_name=yellow_taxi_trips \
+		--url=http://192.168.1.19:8000/output.csv.gz      (python -m http.server)
