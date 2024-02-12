@@ -1,0 +1,40 @@
+Create an external table using the Green Taxi Trip Records Data for 2022:
+-------------------------------------------------------------------------
+CREATE OR REPLACE EXTERNAL TABLE `taxi_rides_ny.hw3_external_green_taxi_tripdata`
+OPTIONS (
+  format = 'PARQUET',
+  uris = ['gs://zoomcamp-hw3-etman/hw3_green_taxi/*']
+)
+
+Create a table in BQ using the Green Taxi Trip Records for 2022 (do not partition or cluster this table):
+---------------------------------------------------------------------------------------------------------
+CREATE OR REPLACE TABLE `taxi_rides_ny.hw3_green_taxi_tripdata` AS
+SELECT * FROM `taxi_rides_ny.hw3_external_green_taxi_tripdata`;
+
+Write a query to count the distinct number of PULocationIDs for the entire dataset:
+-----------------------------------------------------------------------------------
+SELECT COUNT(DISTINCT PULocationID)
+FROM `taxi_rides_ny.hw3_external_green_taxi_tripdata`
+
+How many records have a fare_amount of 0?
+-----------------------------------------
+SELECT COUNT(*)
+FROM `taxi_rides_ny.hw3_external_green_taxi_tripdata`
+WHERE fare_amount = 0;
+
+Create a new table with partitioning & clustering strategy:
+-----------------------------------------------------------
+CREATE OR REPLACE TABLE `taxi_rides_ny.hw3_green_taxi_tripdata_partitioned_clustered`
+PARTITION BY DATE(lpep_pickup_date)
+CLUSTER BY PULocationID AS
+SELECT *, TIMESTAMP_SECONDS(CAST(lpep_pickup_datetime / 1000000000 AS INT64)) AS lpep_pickup_date FROM `taxi_rides_ny.hw3_external_green_taxi_tripdata`;
+
+Write a query to retrieve the distinct PULocationID between lpep_pickup_datetime 06/01/2022 and 06/30/2022 (inclusive)
+----------------------------------------------------------------------------------------------------------------------
+SELECT DISTINCT PULocationID
+FROM `taxi_rides_ny.hw3_green_taxi_tripdata`
+WHERE DATE(TIMESTAMP_SECONDS(CAST(lpep_pickup_datetime / 1000000000 AS INT64))) BETWEEN '2022-06-01' AND '2022-06-30'
+
+SELECT DISTINCT PULocationID
+FROM `taxi_rides_ny.hw3_green_taxi_tripdata_partitioned_clustered`
+WHERE lpep_pickup_date BETWEEN '2022-06-01' AND '2022-06-30'
